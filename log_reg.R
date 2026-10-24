@@ -8,6 +8,12 @@ library(nnet)
 
 mydata=read.csv('cirrhosis.csv')
 
+X1=mydata$N_Days
+Y=mydata$Status
+X2=mydata$Platelets
+X=cbind(X1,X2)
+
+
 log_reg_general <- function(Y,Xmatrix) {
   
   predictors=ncol(Xmatrix)
@@ -44,34 +50,62 @@ rmsefunc <- function(Y,P){
   number=nlevels(Y)
   sequence=seq_len(number)
   onehot=outer(yasnum,sequence,"==")
-  rmseval=sqrt(mean(onehot-P)^2)
+  rmseval=sqrt(mean((onehot-P)^2))
   return(rmseval)
 }
+
+
+
+
+
+
+
+
+
+
+
+null_logreg=function(Y){
+  n=length(Y)
+  Y=factor(Y)
+  mnull=multinom(Y~1)
+  bhatnull=coef(mnull)
+  bhatnull=c(0,as.numeric(bhatnull))
+  phatnull= exp(bhatnull)/sum(exp(bhatnull))# as.numeric(rep(1/(1+exp(-bhatnull)),n))
+  lhatnull=sum(table(Y)*log(phatnull))
+  retlist=list(phat=phatnull,lhat=lhatnull)
+  return(retlist)
+  }
+null_logreg(Y)
+
+
+
+
+
+
 
 
 LogisticRegressionFull <- function(Y,Xmatrix){
   main=log_reg_general(Y,Xmatrix)
   bhat=main$bhat
   prob=multinom_probs(bhat,Xmatrix)
+  
+  lhat=main$model$value
   rmses=rmsefunc(Y,prob)
-  
-  
-  returnlist=list(model=main$model,bhatval=bhat,probabilitys=prob,rmseval=rmses)
+  lhatnull=null_logreg(Y)$lhat
+  rmcfad=1-(-(lhat))/(lhatnull)
+  metricslist=list(AIC=main$AIC,RMSE=rmses,BIC=BIC(main$model),R_mcf=rmcfad)#can we use BIC()?
+  returnlist=list(model=main$model,bhatval=bhat,probabilitys=prob,metrics=metricslist)
 }
-  
+
+
+
 asdf=LogisticRegressionFull(Y,X)
-asdf$model$n
+asdf$model$value
 asdf$bhatval
-asdf$rmseval
+asdf$metrics$R_mcf
+asdf$model$AIC
+BIC(asdf$model)
 
 
-X1=mydata$N_Days
-Y=mydata$Status
-X2=mydata$Platelets
-k=log_reg_general(Y,cbind(X1,X2))
-X=cbind(X1,X2)
-length(Y)
-k$bhats
-p=multinom_probs(k$bhats,X)
 #rmsefunc(Y,p) #-- breaks w. any NA. have not done a data cleaning function or looked at how to clean data yet
 #so commented this out; though it should work
