@@ -17,7 +17,7 @@ X=cbind(X1,X2)
 log_reg_general <- function(Y,Xmatrix) {
   
   predictors=ncol(Xmatrix)
-  M = multinom(Y ~ Xmatrix)
+  M = multinom(Y ~ Xmatrix, trace = FALSE)
   bhat=coef(M)
   
 
@@ -93,7 +93,7 @@ LogisticRegressionFull <- function(Y,Xmatrix){
   rmses=rmsefunc(Y,prob)
   lhatnull=null_logreg(Y)$lhat
   rmcfad=1-(-(lhat))/(lhatnull)
-  metricslist=list(AIC=main$AIC,RMSE=rmses,BIC=BIC(main$model),R_mcf=rmcfad)#can we use BIC()?
+  metricslist=list(AIC=main$model$AIC,RMSE=rmses,BIC=BIC(main$model),R_mcf=rmcfad)#can we use BIC()?
   returnlist=list(model=main$model,bhatval=bhat,probabilitys=prob,metrics=metricslist)
 }
 
