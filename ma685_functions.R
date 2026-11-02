@@ -814,3 +814,109 @@ mywts_group = function(E, group){
   s2 = apply(E, 2, function(e) tapply(e, group, var))
   return(list(W = 1/s2[as.character(group), , drop = FALSE], s2 = s2))
 }
+
+# ======================================================================
+# PART 9: MULTICOLLINEARITY (VIF) FOR LOGISTIC REGRESSION
+# ======================================================================
+
+# Function 41
+# Variance Inflation Factor for each predictor.  VIF_j = 1/(1 - R_j^2), where R_j^2 comes
+# from regressing X_j on all the OTHER predictors. Shortcut: VIF_j is the j-th
+# diagonal entry of the inverse of the correlation matrix of X.
+# X = n x p numeric predictors (NO column of 1s, NO response).
+# Rule of thumb: VIF > 5 is worrying, VIF > 10 is severe.
+# (The response never enters, so this is the same VIF for binomial, multinomial or linear.)
+myvif = function(X){
+  X = as.matrix(X)
+  Rx = cor(X)
+  vif = diag(solve(Rx))
+  names(vif) = colnames(X)
+  return(vif)
+}
+
+# Function 42
+# VIF straight from a fitted glm (binomial) object M: pulls the predictors out of
+# the model matrix (dropping the intercept) and calls myvif()
+# returns the VIFs plus the correlation matrix, so I can see WHICH pair is the problem
+myvif_glm = function(M){
+  X = model.matrix(M)[, -1, drop = FALSE]
+  if(ncol(X) < 2) stop('need at least 2 predictors for a VIF')
+  return(list(vif = myvif(X), cor = cor(X)))
+}
+
+# Function 43
+# drop predictors with large VIF one at a time: remove the predictor with the largest
+# VIF, recompute, and stop when every VIF <= cutoff. Returns the kept variables and
+# the VIFs at every step (for the write-up)
+myvif_drop = function(X, cutoff = 5){
+  X = as.matrix(X)
+  steps = list()
+  while(ncol(X) > 1){
+    v = myvif(X)
+    steps[[length(steps) + 1]] = round(v, 3)
+    if(max(v) <= cutoff) break
+    X = X[, colnames(X) != names(which.max(v)), drop = FALSE]
+  }
+  return(list(kept = colnames(X), steps = steps))
+}
+
+
+
+# ======================================================================
+# PART 10: ALL-POSSIBLE-MODELS SUMMARY TABLE (Lecture 13 "Result Aggregation")
+# ======================================================================
+
+# Function 44
+# builds the Lecture 13 comparison table: one row per model (all 2^p - 1 combinations)
+# with columns  Model | RMSE | Accuracy | AIC | BIC | McF R2
+#   RMSE, AIC, BIC, McF  -> from the model fit on ALL the data
+#   Accuracy             -> model fit on the TRAINING rows, classified on the TESTING rows
+#                           (binomial: threshold tau; multinomial: max predicted probability)
+# df = data frame with the response (column yname) and the predictors (vars)
+# type = 'binomial' (Y must be 0/1) or 'multinom' (Y a factor, first level = reference)
+# latex = TRUE also prints the table as a LaTeX tabular (copy it into the report)
+# returns the table, the best model for each metric (lowest RMSE/AIC/BIC, highest
+# Accuracy/McF), the fitted models, and the split used
+# (McF always grows with more predictors, so judge it by how little it gains)
+mymodeltable = function(df, yname, vars, type = 'binomial', ptrain = 0.65, seed = 2026,
+                        tau = 0.5, digits = 4, latex = FALSE){
+  sp = mysplit(nrow(df), ptrain, seed)
+  res = myallsubsets(df, yname, vars, type, itrain = sp$itrain, tau = tau)
+  
+  tab = res$table[, c('RMSE', 'Accuracy', 'AIC', 'BIC', 'McF')]
+  rownames(tab) = names(res$models)
+  
+  best = c(RMSE = rownames(tab)[which.min(tab[, 'RMSE'])],
+           Accuracy = paste(rownames(tab)[tab[, 'Accuracy'] == max(tab[, 'Accuracy'])], collapse = ' / '),
+           AIC = rownames(tab)[which.min(tab[, 'AIC'])],
+           BIC = rownames(tab)[which.min(tab[, 'BIC'])],
+           McF = rownames(tab)[which.max(tab[, 'McF'])])
+  
+  # rounded copy for display: RMSE/Accuracy/McF to `digits`, AIC/BIC to 1 decimal
+  show = data.frame(Model = gsub('_', ', ', rownames(tab)),
+                    RMSE = round(tab[, 'RMSE'], digits),
+                    Accuracy = round(tab[, 'Accuracy'], digits),
+                    AIC = round(tab[, 'AIC'], 1),
+                    BIC = round(tab[, 'BIC'], 1),
+                    McF = round(tab[, 'McF'], digits),
+                    row.names = NULL)
+  names(show)[6] = 'McF R2'
+  
+  if(latex){
+    lab = sapply(rownames(tab), function(m){
+      if(grepl('X[0-9]+', m)) paste0('$', gsub('X([0-9]+)', 'X_{\\1}', gsub('_', ', ', m)), '$')
+      else gsub('_', '\\\\_', gsub('_', ', ', m))
+    })
+    cat('\\begin{tabular}{l|ccccc}\n\\hline\n')
+    cat('Model & RMSE & Accuracy & AIC & BIC & $R^2_{McF}$ \\\\ \\hline\n')
+    for(i in 1:nrow(show)){
+      cat(lab[i], '&', sprintf(paste0('%.', digits, 'f'), show$RMSE[i]), '&',
+          sprintf(paste0('%.', digits, 'f'), show$Accuracy[i]), '&',
+          sprintf('%.1f', show$AIC[i]), '&', sprintf('%.1f', show$BIC[i]), '&',
+          sprintf(paste0('%.', digits, 'f'), show[i, 6]), '\\\\\n')
+    }
+    cat('\\hline\n\\end{tabular}\n')
+  }
+  return(list(table = show, best = best, models = res$models, split = sp))
+}
+
