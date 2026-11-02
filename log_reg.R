@@ -50,7 +50,7 @@ rmsefunc <- function(Y,P){
   number=nlevels(Y)
   sequence=seq_len(number)
   onehot=outer(yasnum,sequence,"==")
-  rmseval=sqrt(mean((onehot-P)^2))
+  rmseval = sqrt(mean((onehot - P)^2))
   return(rmseval)
 }
 
