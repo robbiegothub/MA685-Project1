@@ -65,3 +65,15 @@ sum(y1==1)/length(y1)
 
 
 eval_multi(y1, XSet1); eval_multi(y1, XSet2); eval_multi(y1, XSet3)
+
+
+
+#ridge logistic regression
+tuneS1 = tune_decay(y1, XSet1)
+tuneS2 = tune_decay(y1, XSet2)
+tuneS3 = tune_decay(y1, XSet3)
+c(tuneS1$lam, tuneS2$lam, tuneS3$lam)
+
+eval_multi(y1, XSet1, decay = tuneS1$lam)
+eval_multi(y1, XSet2, decay = tuneS2$lam)
+eval_multi(y1, XSet3, decay = tuneS3$lam)

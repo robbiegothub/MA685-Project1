@@ -8,11 +8,11 @@ library(nnet)
 
 mydata=read.csv('cirrhosis.csv')
 
-
-log_reg_general <- function(Y,Xmatrix,lam=0) {
+#decay here is equivalent to lam
+log_reg_general <- function(Y,Xmatrix,decay=0) {
   
   predictors=ncol(Xmatrix)
-  M = multinom(Y ~ Xmatrix, decay=lam,trace = FALSE)
+  M = multinom(Y ~ Xmatrix, decay=decay,trace = FALSE)
   bhat=coef(M)
   
 
