@@ -8,16 +8,11 @@ library(nnet)
 
 mydata=read.csv('cirrhosis.csv')
 
-X1=mydata$N_Days
-Y=mydata$Status
-X2=mydata$Platelets
-X=cbind(X1,X2)
 
-
-log_reg_general <- function(Y,Xmatrix) {
+log_reg_general <- function(Y,Xmatrix,lam=0) {
   
   predictors=ncol(Xmatrix)
-  M = multinom(Y ~ Xmatrix, trace = FALSE)
+  M = multinom(Y ~ Xmatrix, decay=lam,trace = FALSE)
   bhat=coef(M)
   
 
@@ -75,7 +70,6 @@ null_logreg=function(Y){
   retlist=list(phat=phatnull,lhat=lhatnull)
   return(retlist)
   }
-null_logreg(Y)
 
 
 
@@ -98,13 +92,6 @@ LogisticRegressionFull <- function(Y,Xmatrix){
 }
 
 
-
-asdf=LogisticRegressionFull(Y,X)
-asdf$model$value
-asdf$bhatval
-asdf$metrics$R_mcf
-asdf$model$AIC
-BIC(asdf$model)
 
 
 #rmsefunc(Y,p) #-- breaks w. any NA. have not done a data cleaning function or looked at how to clean data yet

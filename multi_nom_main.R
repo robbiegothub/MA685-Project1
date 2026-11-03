@@ -64,3 +64,4 @@ sum(y1==2)/length(y1)
 sum(y1==1)/length(y1)
 
 
+eval_multi(y1, XSet1); eval_multi(y1, XSet2); eval_multi(y1, XSet3)
