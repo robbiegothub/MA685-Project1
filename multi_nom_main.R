@@ -69,11 +69,38 @@ eval_multi(y1, XSet1); eval_multi(y1, XSet2); eval_multi(y1, XSet3)
 
 
 #ridge logistic regression
-tuneS1 = tune_decay(y1, XSet1)
-tuneS2 = tune_decay(y1, XSet2)
-tuneS3 = tune_decay(y1, XSet3)
+
+lams = c(0, 10^seq(-3, 2.5, 0.5))
+tuneS1 = tune_decay(y1, XSet1, lams = lams)
+tuneS2 = tune_decay(y1, XSet2, lams = lams)
+tuneS3 = tune_decay(y1, XSet3, lams = lams)
+rbind(bacc = c(tuneS1$lam, tuneS2$lam, tuneS3$lam),
+      acc  = c(tuneS1$lam_acc, tuneS2$lam_acc, tuneS3$lam_acc))
+
 c(tuneS1$lam, tuneS2$lam, tuneS3$lam)
+
 
 eval_multi(y1, XSet1, decay = tuneS1$lam)
 eval_multi(y1, XSet2, decay = tuneS2$lam)
 eval_multi(y1, XSet3, decay = tuneS3$lam)
+
+
+
+#ridge logistic regression with noisy bootstrap sampling
+
+tuneA1 = tune_decay(y1, XSet1, aug = TRUE,lams = lams)            # retune lambda with augmentation
+eval_multi(y1, XSet1, decay = tuneA1$lam, aug = TRUE)
+
+
+tuneA2 = tune_decay(y1, XSet2, aug = TRUE,lams = lams)            # retune lambda with augmentation
+eval_multi(y1, XSet2, decay = tuneA2$lam, aug = TRUE)
+
+tuneA3 = tune_decay(y1, XSet3, aug = TRUE,lams = lams)            # retune lambda with augmentation
+eval_multi(y1, XSet3, decay = tuneA3$lam, aug = TRUE)
+
+
+tuneA1$lam 
+tuneA2$lam 
+tuneA3$lam
+
+plot(log10(tuneA1$lams + 1e-4), tuneA1$bacc, type = 'b')

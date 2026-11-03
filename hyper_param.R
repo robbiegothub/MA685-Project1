@@ -79,17 +79,25 @@ eval_multi = function(Y, X, decay = 0, seeds = 1001:1500, ptrain = 0.65, aug = F
 tune_decay = function(Y, X, lams = c(0, 10^seq(-3, 1, 0.5)), seeds = 1:500, ptrain = 0.65,
                       aug = FALSE, h = 0.5){
   Y = factor(Y); lv = levels(Y); bin = apply(X, 2, function(c) all(c %in% c(0, 1)))
+  # each fit records both accuracy and balanced accuracy, so one run tunes for either target
   res = sapply(seeds, function(s){
     sp = mysplit(length(Y), ptrain, seed = s)
     y = as.character(Y[sp$itest])
     sapply(lams, function(l){
       P = fit_pred(Y, X, sp, l, aug, h, bin, seed = s)
       yhat = lv[apply(P, 1, which.max)]
-      mean(sapply(lv, function(k) mean(yhat[y == k] == k)), na.rm = TRUE)  # balanced acc
+      c(mean(yhat == y),                                                    # accuracy
+        mean(sapply(lv, function(k) mean(yhat[y == k] == k)), na.rm = TRUE))  # balanced acc
     })
-  })
-  m = rowMeans(res)
-  plot(log10(lams + 1e-4), m, type = 'b', pch = 16,
+  }, simplify = 'array')   # 2 x length(lams) x length(seeds)
+  acc = rowMeans(res[1, , , drop = FALSE], dims = 2)[1, ]
+  bacc = rowMeans(res[2, , , drop = FALSE], dims = 2)[1, ]
+  op = par(mfrow = c(1, 2))
+  plot(log10(lams + 1e-4), acc, type = 'b', pch = 16,
+       xlab = 'log10(lambda)', ylab = 'Mean accuracy')
+  plot(log10(lams + 1e-4), bacc, type = 'b', pch = 16,
        xlab = 'log10(lambda)', ylab = 'Mean balanced accuracy')
-  list(lam = lams[which.max(m)], bacc = m, lams = lams)
+  par(op)
+  list(lam = lams[which.max(bacc)], lam_acc = lams[which.max(acc)],
+       acc = acc, bacc = bacc, lams = lams)
 }

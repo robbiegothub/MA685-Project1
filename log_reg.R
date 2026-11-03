@@ -12,7 +12,7 @@ mydata=read.csv('cirrhosis.csv')
 log_reg_general <- function(Y,Xmatrix,decay=0) {
   
   predictors=ncol(Xmatrix)
-  M = multinom(Y ~ Xmatrix, decay=decay,trace = FALSE)
+  M = multinom(Y ~ Xmatrix, decay=decay,trace = FALSE,maxit = 1000)
   bhat=coef(M)
   
 
