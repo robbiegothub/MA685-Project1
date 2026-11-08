@@ -53,6 +53,8 @@ gini_results = rbind(
 round(gini_results, 4)
 gini_results
 
+#VIF
+round(sort(myvif(XSet3), decreasing=TRUE), 2)
 #counts and proportion. was lazy sorry.
 sum(y1==4)
 sum(y1==3)
