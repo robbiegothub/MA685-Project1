@@ -101,3 +101,11 @@ tune_decay = function(Y, X, lams = c(0, 10^seq(-3, 1, 0.5)), seeds = 1:500, ptra
   list(lam = lams[which.max(bacc)], lam_acc = lams[which.max(acc)],
        acc = acc, bacc = bacc, lams = lams)
 }
+
+#claude assisted
+tau_spread = function(tu){
+  c(mean = mean(tu$topt), sd = sd(tu$topt),
+    q05 = unname(quantile(tu$topt, 0.05)), q95 = unname(quantile(tu$topt, 0.95)),
+    min = min(tu$topt), max = max(tu$topt))
+}
+

@@ -40,13 +40,15 @@ Model1Set2$metrics
 Model2Set2$metrics
 
 
+Model1Set2$bhatval
+
 #TAU TUNING 
 tune11 = tune_seeds(Y1, XSet1); eval11 = eval_tau(Y1, XSet1, tune11$tau)
 tune21 = tune_seeds(Y2, XSet1); eval21 = eval_tau(Y2, XSet1, tune21$tau)
 tune12 = tune_seeds(Y1, XSet2); eval12 = eval_tau(Y1, XSet2, tune12$tau)
 tune22 = tune_seeds(Y2, XSet2); eval22 = eval_tau(Y2, XSet2, tune22$tau)
 
-
+eval22
 
 results = rbind(
   Hep_Set1 = c(tau = tune11$tau, eval11["mean", ]),
@@ -55,6 +57,11 @@ results = rbind(
   Cu_Set2  = c(tau = tune22$tau, eval22["mean", ]))
 round(results, 3)
 
+
+tau_tab = rbind(Hep_Set1 = tau_spread(tune11), Cu_Set1 = tau_spread(tune21),
+                Hep_Set2 = tau_spread(tune12), Cu_Set2 = tau_spread(tune22))
+round(tau_tab, 3)
+round(c(sd(tune11$topt), sd(tune12$topt), sd(tune21$topt), sd(tune22$topt)), 3)
 
 max(mean(Y1), 1 - mean(Y1)); max(mean(Y2), 1 - mean(Y2)) #baselines
 
@@ -231,3 +238,6 @@ post1A; post1B; post2A; post2B
 # like claude fudged them, then i just pasted the output to have a table made.
 # feel free to change any of this section at ur discretion. 
 # i just have to finish the interpretation of it.
+
+
+
