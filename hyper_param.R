@@ -37,6 +37,8 @@ std_split = function(X, sp){
   list(tr = scale(X[sp$itrain, ], mu, sdv), te = scale(X[sp$itest, ], mu, sdv))
 }
 
+
+
 #claude generated. smoothed (noisy) bootstrap oversampling, applied to the TRAINING split only.
 # each class is resampled up to `target` rows; continuous columns get N(0, (h*sd_k)^2) noise,
 # sd_k = that column's sd within class k (standardized scale). binary dummies are copied as-is.
@@ -55,12 +57,17 @@ noisy_boot = function(Xtr, Ytr, bin, h = 0.5, target = max(table(Ytr)), seed = 1
   list(X = do.call(rbind, Xn), Y = factor(Yn, levels = lv))
 }
 
+
+
+
 # fit on a (possibly augmented) training split, return test probabilities
 fit_pred = function(Y, X, sp, decay, aug, h, bin, seed){
   Z = std_split(X, sp); Ytr = Y[sp$itrain]; Xtr = Z$tr
   if(aug){ B = noisy_boot(Xtr, Ytr, bin, h = h, seed = seed); Xtr = B$X; Ytr = B$Y }
   multinom_probs(log_reg_general(Ytr, Xtr, decay = decay)$bhats, Z$te)
 }
+
+
 
 #claude geenrated
 eval_multi = function(Y, X, decay = 0, seeds = 1001:1500, ptrain = 0.65, aug = FALSE, h = 0.5){
@@ -75,6 +82,14 @@ eval_multi = function(Y, X, decay = 0, seeds = 1001:1500, ptrain = 0.65, aug = F
   rownames(res) = c('acc', 'bacc', paste0('recall_', lv))
   rbind(mean = rowMeans(res, na.rm = TRUE), sd = apply(res, 1, sd, na.rm = TRUE))
 }
+
+
+
+
+
+
+
+
 #claude generated.
 tune_decay = function(Y, X, lams = c(0, 10^seq(-3, 1, 0.5)), seeds = 1:500, ptrain = 0.65,
                       aug = FALSE, h = 0.5){

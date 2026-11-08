@@ -135,6 +135,8 @@ resultsPC = rbind(
 rbind(results[c('Hep_Set2', 'Cu_Set2'), ], resultsPC)
 
 #VIF FOR Xset2
+vif1=myvif(XSet1)
+round(sort(vif1,decreasing=TRUE),2)
 vif2 = myvif(XSet2)
 round(sort(vif2, decreasing = TRUE), 2)
 

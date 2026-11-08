@@ -86,6 +86,7 @@ eval_multi(y1, XSet3, decay = tuneS3$lam)
 
 
 
+
 #ridge logistic regression with noisy bootstrap sampling
 
 tuneA1 = tune_decay(y1, XSet1, aug = TRUE,lams = lams)            # retune lambda with augmentation
