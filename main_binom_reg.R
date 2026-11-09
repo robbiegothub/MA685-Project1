@@ -350,3 +350,13 @@ tuneL2 = tune_seeds(Y2, XL); evalL2 = eval_tau(Y2, XL, tuneL2$tau)
 # ASSUMPTION 2 TABLE 3 
 round(rbind(Hep_Set2 = results['Hep_Set2', ], Hep_log = c(tau = tuneL1$tau, evalL1['mean', ]),
             Cu_Set2  = results['Cu_Set2', ],  Cu_log  = c(tau = tuneL2$tau, evalL2['mean', ])), 3)
+
+
+
+
+
+
+#BOOTSTRAP CI FOR GINI IMPURITY
+bs_g1 = mybootstrap(Y1, impure, nboot = 10000, seed = 123)   # hepatomegaly
+bs_g2 = mybootstrap(Y2, impure, nboot = 10000, seed = 123)   # urine copper
+round(rbind(Hep = c(bs_g1$est, bs_g1$ci), Cu = c(bs_g2$est, bs_g2$ci)), 4)

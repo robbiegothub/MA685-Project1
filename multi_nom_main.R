@@ -114,4 +114,6 @@ plot(log10(tuneA1$lams + 1e-4), tuneA1$bacc, type = 'b')
 
 
 
-
+#BOOTSTRAP CI FOR GINI IMPURITY
+bs_g = mybootstrap(y1, impure, nboot = 10000, seed = 123)    # stage
+round(c(bs_g$est, bs_g$ci), 4)
