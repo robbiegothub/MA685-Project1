@@ -25,10 +25,29 @@ XSet2 = model.matrix(~ Age + Sex + Spiders + Edema + Bilirubin + Albumin + Alk_P
 
 Model1Set1=LogisticRegressionFull(Y1,XSet1)
 Model2Set1=LogisticRegressionFull(Y2,XSet1)
-
 Model1Set2=LogisticRegressionFull(Y1,XSet2)
 Model2Set2=LogisticRegressionFull(Y2,XSet2)
 
+
+-Model1Set1$model$value
+-Model1Set2$model$value
+
+-Model2Set1$model$value
+-Model2Set2$model$value
+
+null_logreg(Y1)$lhat                      
+null_logreg(Y2)$lhat                      
+
+
+#Using Optim
+myoptim_binom(XSet1,Y1)
+myoptim_binom(XSet2,Y1)
+
+myoptim_binom(XSet1,Y2)
+myoptim_binom(XSet2,Y2)
+
+myoptim_binom(XSet2[, 0], Y1)$loglik      
+myoptim_binom(XSet2[, 0], Y2)$loglik  
 
 #METRICS OUTPUT
 Model1Set1$metrics

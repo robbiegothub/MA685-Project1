@@ -107,3 +107,11 @@ tuneA2$lam
 tuneA3$lam
 
 plot(log10(tuneA1$lams + 1e-4), tuneA1$bacc, type = 'b')
+
+
+
+
+
+
+
+

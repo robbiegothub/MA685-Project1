@@ -39,24 +39,6 @@ std_split = function(X, sp){
 
 
 
-#claude generated. smoothed (noisy) bootstrap oversampling, applied to the TRAINING split only.
-# each class is resampled up to `target` rows; continuous columns get N(0, (h*sd_k)^2) noise,
-# sd_k = that column's sd within class k (standardized scale). binary dummies are copied as-is.
-noisy_boot = function(Xtr, Ytr, bin, h = 0.5, target = max(table(Ytr)), seed = 1){
-  set.seed(seed)
-  Ytr = factor(Ytr); lv = levels(Ytr); cont = !bin
-  Xn = list(Xtr); Yn = as.character(Ytr)
-  for(k in lv){
-    idx = which(Ytr == k); m = target - length(idx)
-    if(m <= 0 || length(idx) == 0) next
-    Xb = Xtr[idx[sample.int(length(idx), m, replace = TRUE)], , drop = FALSE]
-    sdk = apply(Xtr[idx, , drop = FALSE], 2, sd); sdk[is.na(sdk)] = 0
-    Xb[, cont] = Xb[, cont] + matrix(rnorm(m*sum(cont)), m) * rep(h*sdk[cont], each = m)
-    Xn[[length(Xn) + 1]] = Xb; Yn = c(Yn, rep(k, m))
-  }
-  list(X = do.call(rbind, Xn), Y = factor(Yn, levels = lv))
-}
-
 
 
 
@@ -116,6 +98,7 @@ tune_decay = function(Y, X, lams = c(0, 10^seq(-3, 1, 0.5)), seeds = 1:500, ptra
   list(lam = lams[which.max(bacc)], lam_acc = lams[which.max(acc)],
        acc = acc, bacc = bacc, lams = lams)
 }
+
 
 #claude assisted
 tau_spread = function(tu){
