@@ -144,6 +144,21 @@ resultsPC = rbind(
 
 rbind(results[c('Hep_Set2', 'Cu_Set2'), ], resultsPC)
 
+<<<<<<< HEAD
+=======
+#VIF FOR Xset2
+vif1=myvif(XSet1)
+round(sort(vif1,decreasing=TRUE),2)
+vif2 = myvif(XSet2)
+round(sort(vif2, decreasing = TRUE), 2)
+
+# drop the worst predictor one at a time until all VIF <= 5
+vd = myvif_drop(XSet2, cutoff = 5)
+vd$kept
+# all kept under vif <= 5, Multicolinearity assumption satisfied?
+
+
+>>>>>>> 573a6c5a26969c376aac211d14b6a19b08090b48
 #ALL POSSIBLE MODELS 
 XS = XSet2                                 
 #renaming alk_phos for cleaner look in table printout 

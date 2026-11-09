@@ -53,6 +53,8 @@ gini_results = rbind(
 round(gini_results, 4)
 gini_results
 
+#VIF
+round(sort(myvif(XSet3), decreasing=TRUE), 2)
 #counts and proportion. was lazy sorry.
 sum(y1==4)
 sum(y1==3)
@@ -83,6 +85,7 @@ c(tuneS1$lam, tuneS2$lam, tuneS3$lam)
 eval_multi(y1, XSet1, decay = tuneS1$lam)
 eval_multi(y1, XSet2, decay = tuneS2$lam)
 eval_multi(y1, XSet3, decay = tuneS3$lam)
+
 
 
 
