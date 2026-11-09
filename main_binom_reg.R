@@ -13,8 +13,6 @@ clean = mydata[1:312, cols]
 clean = clean[complete.cases(clean), ]
 
 
-
-
 #BUILDING MODEL
 Y1 = as.integer(clean$Hepatomegaly == "Y")
 Y2 = as.integer(clean$Copper > 100)#BINARIZE 
@@ -41,6 +39,7 @@ Model2Set2$metrics
 
 
 Model1Set2$bhatval
+
 
 #TAU TUNING 
 tune11 = tune_seeds(Y1, XSet1); eval11 = eval_tau(Y1, XSet1, tune11$tau)
@@ -91,9 +90,20 @@ gini_results = rbind(
 round(gini_results, 4)
 gini_results
 
+#VIF for Multicolinearirty
+vif2 = myvif(XSet2)
+round(sort(vif2, decreasing = TRUE), 2)
+
+# drop the worst predictor one at a time until all VIF <= 5
+vd = myvif_drop(XSet2, cutoff = 5)
+vd$kept
+# all kept under vif <= 5, Multi-colinearity assumption satisfied?
+
 # PCA with only Xset2
-Xp = XSet2
-dim(Xp)                          # 276 x 12
+# edema as one ordinal column (N = 0, S = 1, Y = 2) instead of the two dummies
+Xp = cbind(XSet2[, setdiff(colnames(XSet2), c('EdemaS', 'EdemaY'))],
+           Edema = c(N = 0, S = 1, Y = 2)[as.character(clean$Edema)])
+dim(Xp)                          # 276 x 11
 colnames(Xp)
 
 stopifnot(all(apply(Xp, 2, sd) > 0))   # scale() breaks on a constant column
@@ -123,7 +133,7 @@ Model1PC = LogisticRegressionFull(Y1, XPC)
 Model2PC = LogisticRegressionFull(Y2, XPC)
 
 cbind(Hep_Set2 = Model1Set2$metrics, Hep_PCA = Model1PC$metrics,
-            Cu_Set2  = Model2Set2$metrics, Cu_PCA  = Model2PC$metrics)
+      Cu_Set2  = Model2Set2$metrics, Cu_PCA  = Model2PC$metrics)
 
 tunePC1 = tune_seeds(Y1, XPC); evalPC1 = eval_tau(Y1, XPC, tunePC1$tau)
 tunePC2 = tune_seeds(Y2, XPC); evalPC2 = eval_tau(Y2, XPC, tunePC2$tau)
@@ -133,16 +143,6 @@ resultsPC = rbind(
   UC_PCA = c(tau = tunePC2$tau, evalPC2['mean', ]))
 
 rbind(results[c('Hep_Set2', 'Cu_Set2'), ], resultsPC)
-
-#VIF FOR Xset2
-vif2 = myvif(XSet2)
-round(sort(vif2, decreasing = TRUE), 2)
-
-# drop the worst predictor one at a time until all VIF <= 5
-vd = myvif_drop(XSet2, cutoff = 5)
-vd$kept
-# all kept under vif <= 5, Multicolinearity assumption satisfied?
-
 
 #ALL POSSIBLE MODELS 
 XS = XSet2                                 
@@ -232,12 +232,85 @@ post2B = post_table(tb2, Y2, 'BIC')
 colnames(post1A)
 post1A; post1B; post2A; post2B
 
-# this was shakey, a lot of the table and weird functions were made by claude
-# it was really awkward to look at all the ties so i just decided to let claude 
-# do the weird stuff. I made sure to check over it and none of the numbers look 
-# like claude fudged them, then i just pasted the output to have a table made.
-# feel free to change any of this section at ur discretion. 
-# i just have to finish the interpretation of it.
+###############
 
+#ASSUMPTIONS TESTING
+nums = c('Age', 'Bilirubin', 'Albumin', 'Alk_Phos', 'SGOT', 'Platelets', 'Cholesterol', 'Tryglicerides')
+stopifnot(all(nums %in% names(clean)), all(nums %in% colnames(XSet2)))
 
+#Assumption 2
+#empirical log-odds in 6 equal-count bins 
+elogit = function(x, y, bins = 6){
+  g = cut(x, unique(quantile(x, 0:bins / bins)), include.lowest = TRUE)
+  n1 = tapply(y, g, sum); n0 = tapply(1 - y, g, sum)
+  list(x = as.numeric(tapply(x, g, mean)), el = log((n1 + 0.5) / (n0 + 0.5)))
+}
+xval = function(v){ x = clean[[v]]; if(v == 'Age' && max(x) > 200) x / 365.25 else x }
 
+lin_panels = function(Y){
+  par(mfrow = c(2, 4), mar = c(4, 4, 2.5, 1))
+  for(v in nums){
+    e = elogit(xval(v), Y)
+    plot(e$x, e$el, pch = 16, xlab = ifelse(v == 'Age', 'Age (years)', v),
+         ylab = 'Empirical log-odds', main = paste0('r = ', round(cor(e$x, e$el), 2)))
+    abline(lm(e$el ~ e$x), lty = 2)
+  }
+}
+par(mfrow = c(1, 1))
+#Assumption 2 fig 1
+lin_panels(Y1)
+#Assumtption 2 fig 2
+lin_panels(Y2)   
+
+pdf('linearity_hep.pdf', width = 10, height = 5.5); lin_panels(Y1); dev.off()
+pdf('linearity_cu.pdf',  width = 10, height = 5.5); lin_panels(Y2); dev.off()
+#some strong predictors but also quite a few lab tests that seem right skewed
+#these are the models and which predictors no clear trends
+#For Y1 Alk, Age, Chol and triglycerides
+#For Y2 Alk, Age, and Platelets
+
+# looking at the predictors to try a squared term (with all other predictors held constant)
+# testing and printing pvals with a bonferroni correction at end 
+lin_table = function(Y){
+  d = data.frame(XSet2)
+  d[nums] = scale(as.matrix(d[nums]))
+  d$yy = as.numeric(Y)
+  m0 = glm(yy ~ ., data = d, family = binomial)
+  sapply(nums, function(v){
+    e = elogit(xval(v), Y)
+    m1 = update(m0, as.formula(paste('. ~ . + I(', v, '^2)')))
+    c(r = cor(e$x, e$el), p_quad = anova(m0, m1, test = 'Chisq')[2, 'Pr(>Chi)'])
+  })
+}
+# ASSUMPTION 2 TABLE 2
+lin1 = lin_table(Y1); lin2 = lin_table(Y2)
+print('lin_table_1')
+round(t(lin1), 3) 
+print('lin_table_2')
+round(t(lin2), 3)
+
+p_all = c(lin1['p_quad', ], lin2['p_quad', ])
+names(p_all) = c(paste0('Hep_', nums), paste0('Cu_', nums))
+round(sort(p.adjust(p_all, method = 'bonferroni'))[1:4], 3) 
+#with bonferoni correction only the bilirubin on the copper test is significant
+
+#log transfrom the billirubin to see if truly requires non linear transformation
+d_raw = data.frame(XSet2)
+aic_cmp = function(Y, skew){
+  d_log = d_raw; d_log[skew] = log(d_log[skew])
+  c(raw = AIC(glm(Y ~ ., data = d_raw, family = binomial)),
+    log = AIC(glm(Y ~ ., data = d_log, family = binomial)))
+}
+
+bil  = c('Bilirubin')
+five = c('Bilirubin', 'Alk_Phos', 'SGOT', 'Cholesterol', 'Tryglicerides')
+round(rbind(Hep_bil = aic_cmp(Y1, bil), Cu_bil = aic_cmp(Y2, bil),
+            Hep_five = aic_cmp(Y1, five), Cu_five = aic_cmp(Y2, five)), 1)
+
+XL = XSet2
+XL[, c('Bilirubin')] = log(XL[, c('Bilirubin')])
+tuneL1 = tune_seeds(Y1, XL); evalL1 = eval_tau(Y1, XL, tuneL1$tau)
+tuneL2 = tune_seeds(Y2, XL); evalL2 = eval_tau(Y2, XL, tuneL2$tau)
+# ASSUMPTION 2 TABLE 3 
+round(rbind(Hep_Set2 = results['Hep_Set2', ], Hep_log = c(tau = tuneL1$tau, evalL1['mean', ]),
+            Cu_Set2  = results['Cu_Set2', ],  Cu_log  = c(tau = tuneL2$tau, evalL2['mean', ])), 3)
