@@ -118,27 +118,41 @@ vd = myvif_drop(XSet2, cutoff = 5)
 vd$kept
 # all kept under vif <= 5, Multi-colinearity assumption satisfied?
 
-# PCA with only Xset2
-# edema as one ordinal column (N = 0, S = 1, Y = 2) instead of the two dummies
-Xp = cbind(XSet2[, setdiff(colnames(XSet2), c('EdemaS', 'EdemaY'))],
-           Edema = c(N = 0, S = 1, Y = 2)[as.character(clean$Edema)])
-dim(Xp)                          # 276 x 11
+# PCA with only lab predictors from Xset2
+labs = c('Bilirubin', 'Albumin', 'Alk_Phos', 'SGOT', 'Platelets', 'Cholesterol', 'Tryglicerides')
+Xp = XSet2[, labs]
+dim(Xp)                          # 276 x 7
 colnames(Xp)
 
 stopifnot(all(apply(Xp, 2, sd) > 0))   # scale() breaks on a constant column
 
-# pca on everything in set 2
+# pca on the lab values
 mypca(Xp)
 pca = mypca(Xp)
+
+# figures for paper
+ev = pca$values
+vt = 0.85                                  # variance threshold used by mypca
+pdf('pca_scree_cum.pdf', width = 10, height = 4.5)
+par(mfrow = c(1, 2))
+plot(ev, type = 'b', pch = 16, xlab = 'Component', ylab = 'Eigenvalue', main = 'Scree Plot')
+abline(h = 1, lty = 2)
+plot(cumsum(ev) / sum(ev), type = 'b', pch = 16, ylim = c(0, 1),
+     xlab = 'Number of components', ylab = 'Cumulative proportion of variance',
+     main = 'Cumulative Variance')
+abline(h = vt, lty = 2)
+dev.off()
+par(mfrow = c(1, 1))
+# end of figures for PCA
 
 round(cbind(Eigenvalue = pca$values,
             Prop = pca$values / sum(pca$values),
             Flam = pca$Flam), 4)
-elbow = 4
+elbow = 3                        # placeholder, reset after viewing the new scree plot
 
 data.frame(Method = c('Kaiser', 'Elbow', 'Var Threshold'),
            PCs = c(pca$kaiser, elbow, pca$vthresh))
-# use Var Thresh, keeps most features
+# use Var Thresh, keeps most of the variance
 
 dr = pca$vthresh
 pc = mypca(Xp, dr = dr, plot = FALSE)
@@ -146,7 +160,10 @@ pc = mypca(Xp, dr = dr, plot = FALSE)
 round(cov(pc$Xnew), 4)           # kept eigenvalues
 round(pc$Lam, 3)                 # loadings
 
-XPC = pc$Xnew
+# non-lab predictors (Set 1) stay as they are; only the labs are replaced by components
+XPC = cbind(XSet1, pc$Xnew)
+colnames(XPC)
+
 # Fit both models
 Model1PC = LogisticRegressionFull(Y1, XPC)
 Model2PC = LogisticRegressionFull(Y2, XPC)
@@ -163,21 +180,6 @@ resultsPC = rbind(
 
 rbind(results[c('Hep_Set2', 'Cu_Set2'), ], resultsPC)
 
-<<<<<<< HEAD
-=======
-#VIF FOR Xset2
-vif1=myvif(XSet1)
-round(sort(vif1,decreasing=TRUE),2)
-vif2 = myvif(XSet2)
-round(sort(vif2, decreasing = TRUE), 2)
-
-# drop the worst predictor one at a time until all VIF <= 5
-vd = myvif_drop(XSet2, cutoff = 5)
-vd$kept
-# all kept under vif <= 5, Multicolinearity assumption satisfied?
-
-
->>>>>>> 573a6c5a26969c376aac211d14b6a19b08090b48
 #ALL POSSIBLE MODELS 
 XS = XSet2                                 
 #renaming alk_phos for cleaner look in table printout 
@@ -295,9 +297,9 @@ par(mfrow = c(1, 1))
 lin_panels(Y1)
 #Assumtption 2 fig 2
 lin_panels(Y2)   
+#pdf('linearity_hep.pdf', width = 10, height = 5.5); lin_panels(Y1); dev.off()
+#pdf('linearity_cu.pdf',  width = 10, height = 5.5); lin_panels(Y2); dev.off()
 
-pdf('linearity_hep.pdf', width = 10, height = 5.5); lin_panels(Y1); dev.off()
-pdf('linearity_cu.pdf',  width = 10, height = 5.5); lin_panels(Y2); dev.off()
 #some strong predictors but also quite a few lab tests that seem right skewed
 #these are the models and which predictors no clear trends
 #For Y1 Alk, Age, Chol and triglycerides
@@ -326,9 +328,9 @@ round(t(lin2), 3)
 p_all = c(lin1['p_quad', ], lin2['p_quad', ])
 names(p_all) = c(paste0('Hep_', nums), paste0('Cu_', nums))
 round(sort(p.adjust(p_all, method = 'bonferroni'))[1:4], 3) 
-#with bonferoni correction only the bilirubin on the copper test is significant
+#with bonferoni correction only the Bilirubin on the copper test is significant
 
-#log transfrom the billirubin to see if truly requires non linear transformation
+#log transfrom the Bilirubin to see if truly requires non linear transformation
 d_raw = data.frame(XSet2)
 aic_cmp = function(Y, skew){
   d_log = d_raw; d_log[skew] = log(d_log[skew])
