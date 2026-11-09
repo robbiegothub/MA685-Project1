@@ -69,6 +69,48 @@ sum(y1==1)/length(y1)
 eval_multi(y1, XSet1); eval_multi(y1, XSet2); eval_multi(y1, XSet3)
 
 
+#ASSUMPTION 2: linearity of log-odds, stage k vs stage 1
+library(nnet)
+nums3 = c('Age', 'Bilirubin', 'Albumin', 'Alk_Phos', 'SGOT', 'Platelets', 'Cholesterol', 'Tryglicerides', 'Copper')
+stopifnot(all(nums3 %in% colnames(XSet3)), all(nums3 %in% names(clean)))
+
+xval = function(v){ x = clean[[v]]; if(v == 'Age' && max(x) > 200) x / 365.25 else x }
+
+#empirical log-odds of stage k vs stage 1 in 3 equal-count groups (only 12 patients in stage 1)
+elogit_k = function(x, k, bins = 3){
+  g = cut(x, unique(quantile(x, 0:bins / bins)), include.lowest = TRUE)
+  nk = tapply(y1 == k, g, sum); n1 = tapply(y1 == 1, g, sum)
+  list(x = as.numeric(tapply(x, g, mean)), el = log((nk + 0.5) / (n1 + 0.5)))
+}
+
+stage_panels = function(){
+  par(mfrow = c(2, 5), mar = c(4, 4, 2, 1))
+  for(v in nums3){
+    e = lapply(2:4, function(k) elogit_k(xval(v), k))
+    plot(range(unlist(lapply(e, function(a) a$x))), range(sapply(e, function(a) a$el)), type = 'n',
+         xlab = ifelse(v == 'Age', 'Age (years)', v), ylab = 'Log-odds vs stage 1', main = v)
+    for(i in 1:3) lines(e[[i]]$x, e[[i]]$el, type = 'b', pch = c(16, 17, 15)[i], lty = i)
+  }
+  plot.new()
+  legend('center', legend = c('Stage 2', 'Stage 3', 'Stage 4'), pch = c(16, 17, 15), lty = 1:3, bty = 'n')
+}
+stage_panels()
+pdf('linearity_stage.pdf', width = 10, height = 4.5); stage_panels(); dev.off()
+par(mfrow = c(1, 1))
+
+#claude assisted for the squared curvature testing, wanted a sort of quantitative method
+#squared-term test: x^2 enters all three stage-vs-1 logits (3 df)
+d3 = data.frame(XSet3)
+d3[nums3] = scale(as.matrix(d3[nums3]))
+d3$yy = y1
+m0 = multinom(yy ~ ., data = d3, trace = FALSE, maxit = 500)
+stage_quad = sapply(nums3, function(v){
+  m1 = update(m0, as.formula(paste('. ~ . + I(', v, '^2)')))
+  anova(m0, m1)[2, 'Pr(Chi)']
+})
+round(stage_quad, 3)
+round(p.adjust(stage_quad, method = 'bonferroni'), 3)
+
 
 #ridge logistic regression
 

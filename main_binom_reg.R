@@ -275,6 +275,7 @@ nums = c('Age', 'Bilirubin', 'Albumin', 'Alk_Phos', 'SGOT', 'Platelets', 'Choles
 stopifnot(all(nums %in% names(clean)), all(nums %in% colnames(XSet2)))
 
 #Assumption 2
+#claude assisted for the squared term test along with how to make the plots
 #empirical log-odds in 6 equal-count bins 
 elogit = function(x, y, bins = 6){
   g = cut(x, unique(quantile(x, 0:bins / bins)), include.lowest = TRUE)
